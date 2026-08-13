@@ -5,10 +5,11 @@ including deliberate failure injection, late-arriving data, and recovery.
 This is the evidence of hands-on operational experience.
 
 ## Day 1 — Initial Load
-- Date:
-- What ran:
-- Result:
-- Notes:
+- Date: 13/08/2026
+- Failed: Key Vault name too long (same root cause as storage account earlier)
+- Failed: SQL database missing required `location` property
+  (unlike storage containers, SQL databases don't inherit location from parent server — must be set explicitly, even as a child resource)
+- Both fixed, redeployed and successful
 
 ## Day 2 — First Incremental Run
 - Date:
