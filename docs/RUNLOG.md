@@ -43,3 +43,9 @@ This is the evidence of hands-on operational experience.
 - dbt Cloud CI result:
 - Power BI refresh:
 - Summary of what this week demonstrated:
+
+## Day 1 (cont'd) — Phase 2: Event Hubs Producer
+- Set up Python venv, installed azure-eventhub, azure-identity, faker, python-dotenv
+- Hit a bash syntax error using angle-bracket placeholder literally in a command (redirect operator conflict)
+- Successfully sent 20 simulated transactions to Event Hub, confirmed in Azure Portal metrics
+- Rotated the shared access key after it was exposed during troubleshooting, using `az eventhubs namespace authorization-rule keys renew`

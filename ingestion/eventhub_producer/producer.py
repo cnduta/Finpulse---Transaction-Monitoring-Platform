@@ -1,10 +1,6 @@
 """
 FinPulse — Event Hubs Producer
 Simulates a stream of financial transactions and sends them to Azure Event Hubs.
-
-Auth: Uses a connection string for local development (simplest path).
-In a "production" setup you'd swap to DefaultAzureCredential + Managed Identity
-(see the commented alternative below) — worth being able to explain both.
 """
 
 import asyncio
@@ -23,13 +19,11 @@ load_dotenv()
 
 fake = Faker()
 
-EVENT_HUB_CONNECTION_STR = os.environ["EVENT_HUB_CONNECTION_STR"]  # from Key Vault / .env, not hardcoded
+EVENT_HUB_CONNECTION_STR = os.environ["EVENT_HUB_CONNECTION_STR"]
 EVENT_HUB_NAME = os.environ.get("EVENT_HUB_NAME", "transactions")
 
 CURRENCIES = ["GBP", "USD", "EUR", "KES", "NGN", "ZAR"]
 COUNTRIES = ["UK", "US", "Germany", "Kenya", "Nigeria", "South Africa"]
-# Deliberately include a couple of higher-risk jurisdictions so downstream
-# "flagging" logic in dbt has something realistic to key off later.
 HIGH_RISK_COUNTRIES = {"Nigeria"}
 
 
