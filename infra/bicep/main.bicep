@@ -1,6 +1,7 @@
 // =============================================================
 // FinPulse — Core Infrastructure
-// Provisions: ADLS Gen2 storage, Event Hubs namespace, Key Vault
+// Provisions: ADLS Gen2 storage, Event Hubs (+ Capture), Key Vault,
+// Data Factory, Azure SQL (watermark control table)
 // =============================================================
 
 @description('Short project name used as a naming prefix')
@@ -17,34 +18,39 @@ param environment string = 'dev'
 @description('Azure region for all resources')
 param location string = 'uksouth'
 
-// A short unique suffix so globally-unique resource names (storage, key vault)
-// don't clash with other Azure customers. Deterministic per resource group,
-// so re-running the deployment doesn't generate a new name each time.
+@secure()
+@description('Admin password for the SQL logical server. Pass via env var, never commit.')
+param sqlAdminPassword string
+
 var uniqueSuffix = uniqueString(resourceGroup().id)
 
 var storageAccountName = toLower('${projectName}sa${environment}${substring(uniqueSuffix, 0, 10)}')
 var keyVaultName = toLower('${projectName}-kv-${environment}-${substring(uniqueSuffix, 0, 8)}')
 var eventHubNamespaceName = toLower('${projectName}-ehns-${environment}-${uniqueSuffix}')
+var dataFactoryName = toLower('${projectName}-adf-${environment}-${uniqueSuffix}')
+var sqlServerName = toLower('${projectName}-sql-${environment}-${uniqueSuffix}')
+var sqlAdminLogin = 'finpulseadmin'
+
+var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 
 // -------------------------------------------------------------
-// ADLS Gen2 Storage Account (Bronze/raw landing zone)
+// ADLS Gen2 Storage Account
 // -------------------------------------------------------------
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: storageAccountName
   location: location
   sku: {
-    name: 'Standard_LRS' // Locally redundant storage — cheapest tier, fine for a dev/demo project
+    name: 'Standard_LRS'
   }
   kind: 'StorageV2'
   properties: {
-    isHnsEnabled: true // This is what makes it "ADLS Gen2" rather than plain blob storage
+    isHnsEnabled: true
     minimumTlsVersion: 'TLS1_2'
     allowBlobPublicAccess: false
     supportsHttpsTrafficOnly: true
   }
 }
 
-// Containers for the Medallion layers, created inside the storage account
 resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-01-01' = {
   parent: storageAccount
   name: 'default'
@@ -67,7 +73,7 @@ resource rawStreamingContainer 'Microsoft.Storage/storageAccounts/blobServices/c
 }
 
 // -------------------------------------------------------------
-// Key Vault (secrets: Snowflake creds, connection strings)
+// Key Vault
 // -------------------------------------------------------------
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: keyVaultName
@@ -78,34 +84,30 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
       name: 'standard'
     }
     tenantId: subscription().tenantId
-    enableRbacAuthorization: true // Modern approach: use Azure RBAC roles instead of legacy access policies
+    enableRbacAuthorization: true
     enableSoftDelete: true
-    softDeleteRetentionInDays: 7 // Minimum allowed; keeps demo cleanup cheap/fast
+    softDeleteRetentionInDays: 7
   }
 }
 
 // -------------------------------------------------------------
-// Event Hubs (streaming transaction ingestion)
+// Event Hubs (streaming + Capture into raw-streaming container)
 // -------------------------------------------------------------
 resource eventHubNamespace 'Microsoft.EventHub/namespaces@2023-01-01-preview' = {
   name: eventHubNamespaceName
   location: location
   sku: {
-    name: 'Standard' // Basic tier doesn't support Capture or consumer groups we may want later
+    name: 'Standard'
     tier: 'Standard'
-    capacity: 1 // Throughput units — 1 is enough for a simulated demo workload
+    capacity: 1
   }
   identity: {
-    type: 'SystemAssigned' // Needed so Capture can write to ADLS without storage account keys
+    type: 'SystemAssigned'
   }
   properties: {
     minimumTlsVersion: '1.2'
   }
 }
-
-// Storage Blob Data Contributor role, built into Azure — lets the Event Hubs
-// namespace's managed identity write blobs into our storage account.
-var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 
 resource captureRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storageAccount.id, eventHubNamespace.id, storageBlobDataContributorRoleId)
@@ -121,19 +123,18 @@ resource eventHub 'Microsoft.EventHub/namespaces/eventhubs@2023-01-01-preview' =
   parent: eventHubNamespace
   name: 'transactions'
   properties: {
-    messageRetentionInDays: 1 // Demo project — keep retention (and cost) minimal
-    partitionCount: 2 // Low partition count is fine for simulated single-producer traffic
+    messageRetentionInDays: 1
+    partitionCount: 2
     captureDescription: {
       enabled: true
       encoding: 'Avro'
-      intervalInSeconds: 300 // Flush every 5 minutes...
-      sizeLimitInBytes: 314572800 // ...or 300MB, whichever comes first
+      intervalInSeconds: 300
+      sizeLimitInBytes: 314572800
       destination: {
         name: 'EventHubArchive.AzureBlockBlob'
         properties: {
           storageAccountResourceId: storageAccount.id
           blobContainer: 'raw-streaming'
-          // Folder structure Azure will create automatically inside the container
           archiveNameFormat: '{Namespace}/{EventHub}/{PartitionId}/{Year}/{Month}/{Day}/{Hour}/{Minute}/{Second}'
         }
       }
@@ -141,43 +142,36 @@ resource eventHub 'Microsoft.EventHub/namespaces/eventhubs@2023-01-01-preview' =
   }
   dependsOn: [
     rawStreamingContainer
+    captureRoleAssignment
   ]
 }
 
-// Consumer group dedicated to the process that reads from Event Hubs into ADLS
 resource consumerGroup 'Microsoft.EventHub/namespaces/eventhubs/consumergroups@2023-01-01-preview' = {
   parent: eventHub
   name: 'adls-writer'
 }
 
-output storageAccountName string = storageAccount.name
-output keyVaultName string = keyVault.name
-output keyVaultUri string = keyVault.properties.vaultUri
 // -------------------------------------------------------------
-// Azure Data Factory (batch ingestion, watermarked pipelines)
+// Data Factory
 // -------------------------------------------------------------
-var dataFactoryName = toLower('${projectName}-adf-${environment}-${uniqueSuffix}')
-
 resource dataFactory 'Microsoft.DataFactory/factories@2018-06-01' = {
   name: dataFactoryName
   location: location
   identity: {
-    type: 'SystemAssigned' // ADF will need this to read secrets from Key Vault and write to ADLS
+    type: 'SystemAssigned'
   }
 }
 
-// Let ADF's managed identity read secrets from Key Vault (e.g. Snowflake creds later)
 resource adfKeyVaultRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(keyVault.id, dataFactory.id, 'secrets-user')
   scope: keyVault
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
     principalId: dataFactory.identity.principalId
     principalType: 'ServicePrincipal'
   }
 }
 
-// Let ADF write to the Bronze container
 resource adfStorageRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storageAccount.id, dataFactory.id, storageBlobDataContributorRoleId)
   scope: storageAccount
@@ -191,13 +185,6 @@ resource adfStorageRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 // -------------------------------------------------------------
 // Azure SQL Database (serverless) — watermark control table
 // -------------------------------------------------------------
-@secure()
-@description('Admin password for the SQL logical server. Pass via CLI param, never commit.')
-param sqlAdminPassword string
-
-var sqlServerName = toLower('${projectName}-sql-${environment}-${uniqueSuffix}')
-var sqlAdminLogin = 'finpulseadmin'
-
 resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
   name: sqlServerName
   location: location
@@ -208,7 +195,6 @@ resource sqlServer 'Microsoft.Sql/servers@2023-05-01-preview' = {
   }
 }
 
-// Allow Azure services (like ADF) to reach this server
 resource sqlFirewallAllowAzure 'Microsoft.Sql/servers/firewallRules@2023-05-01-preview' = {
   parent: sqlServer
   name: 'AllowAzureServices'
@@ -223,17 +209,23 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
   name: 'finpulse-control'
   location: location
   sku: {
-    name: 'GP_S_Gen5_1' // General Purpose Serverless, 1 vCore
+    name: 'GP_S_Gen5_1'
     tier: 'GeneralPurpose'
   }
   properties: {
-    autoPauseDelay: 60 // Pauses after 60 min idle — you pay ~nothing between runs
+    autoPauseDelay: 60
     minCapacity: json('0.5')
   }
 }
 
-output sqlServerFqdn string = sqlServer.properties.fullyQualifiedDomainName
-output sqlDatabaseName string = sqlDatabase.name
+// -------------------------------------------------------------
+// Outputs
+// -------------------------------------------------------------
+output storageAccountName string = storageAccount.name
+output keyVaultName string = keyVault.name
+output keyVaultUri string = keyVault.properties.vaultUri
 output eventHubNamespaceName string = eventHubNamespace.name
 output eventHubName string = eventHub.name
 output dataFactoryName string = dataFactory.name
+output sqlServerFqdn string = sqlServer.properties.fullyQualifiedDomainName
+output sqlDatabaseName string = sqlDatabase.name
