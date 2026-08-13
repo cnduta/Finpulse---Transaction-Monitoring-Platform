@@ -11,21 +11,21 @@ depends on the previous. Tick off items as you go.
 - [x] Azure CLI + Bicep CLI installed locally
 
 ---
-## Phase 1 — Bicep: Core Infrastructure (in progress)
+## Phase 1 — Bicep: Core Infrastructure ✅ (done)
 - [x] `main.bicep` written: Storage Account (ADLS Gen2), Key Vault, Event Hubs
-- [ ] `az group create` — create resource group
-- [ ] `az deployment group validate` — check syntax
-- [ ] `az deployment group what-if` — preview changes
-- [ ] `az deployment group create` — deploy for real
-- [ ] Verify in Azure Portal: storage account has `bronze` and `raw-streaming` containers, Key Vault exists, Event Hub namespace + `transactions` hub exists
-- [ ] Grant yourself Key Vault Secrets Officer role (needed since we use RBAC auth)
+- [x] `az group create` — create resource group
+- [x] `az deployment group validate` — check syntax
+- [x] `az deployment group what-if` — preview changes
+- [x] `az deployment group create` — deploy for real
+- [x] Verify in Azure Portal: storage account has `bronze` and `raw-streaming` containers, Key Vault exists, Event Hub namespace + `transactions` hub exists
+- [x] Grant yourself Key Vault Secrets Officer role (needed since we use RBAC auth)
 
 ---
 ## Phase 2 — Ingestion: Streaming + Batch with Watermarking
 **2a. Event Hubs Python producer**
-- [ ] Write `producer.py` using `azure-eventhub` SDK + Managed Identity (or connection string for local dev)
-- [ ] Generate synthetic transaction events: account_id, amount, currency, country, timestamp, merchant
-- [ ] Run producer locally, confirm events land in Event Hub (check via Azure Portal metrics)
+- [x] Write `producer.py` using `azure-eventhub` SDK + Managed Identity (or connection string for local dev)
+- [x] Generate synthetic transaction events: account_id, amount, currency, country, timestamp, merchant
+- [x] Run producer locally, confirm events land in Event Hub (check via Azure Portal metrics)
 
 **2b. Capture streaming data into ADLS**
 - [ ] Enable Event Hubs **Capture** feature (built-in, writes Avro files straight to `raw-streaming` container on a time/size window) — simplest path, no separate consumer app needed
