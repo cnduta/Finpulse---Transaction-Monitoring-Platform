@@ -1,0 +1,19 @@
+version: 2
+
+sources:
+  - name: raw
+    database: finpulse_db
+    schema: raw
+    tables:
+      - name: raw_transactions_streaming
+        description: "Raw streaming transactions landed via Snowpipe from Event Hubs Capture"
+        loaded_at_field: _loaded_at
+        freshness:
+          warn_after: {count: 6, period: hour}
+          error_after: {count: 24, period: hour}
+      - name: raw_fx_rates_batch
+        description: "Raw FX reference data landed via ADF + scheduled Snowflake Task"
+        loaded_at_field: _loaded_at
+        freshness:
+          warn_after: {count: 2, period: day}
+          error_after: {count: 4, period: day}

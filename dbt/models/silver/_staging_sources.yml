@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: staging
+    database: finpulse_db
+    schema: staging
+    tables:
+      - name: accounts_current
+        description: >
+          Maintained by Snowflake Stream + Task CDC pipeline
+          (see snowflake/sql/07-10), NOT by dbt. Fed by native Snowflake
+          CDC off raw.accounts_master.
+        loaded_at_field: updated_at

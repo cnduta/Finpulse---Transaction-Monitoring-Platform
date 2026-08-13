@@ -1,0 +1,21 @@
+name: 'finpulse'
+version: '1.0.0'
+config-version: 2
+
+profile: 'finpulse'
+
+model-paths: ["models"]
+test-paths: ["tests"]
+snapshot-paths: ["snapshots"]
+
+models:
+  finpulse:
+    bronze:
+      +materialized: view      # Bronze: thin pass-through, no need to persist as a table
+      +schema: raw
+    silver:
+      +materialized: incremental  # Silver: the layer that actually benefits from incremental builds
+      +schema: staging
+    gold:
+      +materialized: table     # Gold: rebuilt fully each run, small enough not to matter at this scale
+      +schema: analytics

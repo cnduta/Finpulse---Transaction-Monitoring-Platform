@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: silver_transactions
+    description: "Cleaned, deduplicated transactions with basic flagging logic"
+    columns:
+      - name: transaction_id
+        tests:
+          - unique
+          - not_null
+      - name: amount
+        tests:
+          - not_null
+      - name: currency
+        tests:
+          - accepted_values:
+              values: ['GBP', 'USD', 'EUR', 'KES', 'NGN', 'ZAR']
+
+  - name: gold_fact_transactions
+    description: "Transaction fact table joined to current account dimension"
+    columns:
+      - name: transaction_id
+        tests:
+          - unique
+          - not_null
+      - name: account_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('snap_accounts')
+              field: account_id
