@@ -22,8 +22,8 @@ param location string = 'uksouth'
 // so re-running the deployment doesn't generate a new name each time.
 var uniqueSuffix = uniqueString(resourceGroup().id)
 
-var storageAccountName = toLower('${projectName}sa${environment}${uniqueSuffix}')
-var keyVaultName = toLower('${projectName}-kv-${environment}-${uniqueSuffix}')
+var storageAccountName = toLower('${projectName}sa${environment}${substring(uniqueSuffix, 0, 10)}')
+var keyVaultName = toLower('${projectName}-kv-${environment}-${substring(uniqueSuffix, 0, 8)}')
 var eventHubNamespaceName = toLower('${projectName}-ehns-${environment}-${uniqueSuffix}')
 
 // -------------------------------------------------------------
@@ -221,6 +221,7 @@ resource sqlFirewallAllowAzure 'Microsoft.Sql/servers/firewallRules@2023-05-01-p
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
   parent: sqlServer
   name: 'finpulse-control'
+  location: location
   sku: {
     name: 'GP_S_Gen5_1' // General Purpose Serverless, 1 vCore
     tier: 'GeneralPurpose'
