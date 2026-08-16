@@ -49,3 +49,11 @@ This is the evidence of hands-on operational experience.
 - Hit a bash syntax error using angle-bracket placeholder literally in a command (redirect operator conflict)
 - Successfully sent 20 simulated transactions to Event Hub, confirmed in Azure Portal metrics
 - Rotated the shared access key after it was exposed during troubleshooting, using `az eventhubs namespace authorization-rule keys renew`
+
+## Day 2 (cont'd) — Streaming pipeline verified end-to-end
+- Confirmed Event Hubs Capture writing real Avro files to raw-streaming
+  container, correct partitioned folder structure
+  (finpulse-ehns-dev-.../transactions/{partition}/{year}/{month}/{day}/{hour}/{minute}/{second})
+- CLI blob listing hit a Cloud Shell managed-identity token timeout issue
+  (known quirk) — verified via Portal Storage Browser instead
+- Phase 2 (streaming ingestion) fully verified end-to-end: producer -> Event Hub -> Capture -> ADLS
