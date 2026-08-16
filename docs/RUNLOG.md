@@ -85,3 +85,14 @@ This is the evidence of hands-on operational experience.
   full event-driven auto-ingest
 - Documented as a legitimate "near-real-time" pattern rather than a
   workaround; full Event Grid integration noted as a future enhancement
+
+## Day 3 (final) — Phase 3 complete
+- Hit "does not exist" error on raw_fx_rates_batch: table/task creation
+  step had been skipped earlier while focus shifted to debugging the
+  Snowpipe auto-ingest issue -- good reminder that mid-troubleshooting,
+  it's easy to lose track of which planned steps actually executed
+- Re-ran the table/task creation, confirmed working
+- Final verification: 40 rows in raw_transactions_streaming (matches
+  2 producer runs x 20 events), 2 rows in raw_fx_rates_batch (matches
+  2 manual task executions)
+- Phase 3 (Snowflake landing, streaming + batch) fully complete and verified
