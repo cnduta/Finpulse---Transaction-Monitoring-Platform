@@ -21,29 +21,29 @@ depends on the previous. Tick off items as you go.
 - [x] Grant yourself Key Vault Secrets Officer role (needed since we use RBAC auth)
 
 ---
-## Phase 2 — Ingestion: Streaming + Batch with Watermarking
+## Phase 2 — Ingestion: Streaming + Batch with Watermarking ✅ (done)
 **2a. Event Hubs Python producer**
 - [x] Write `producer.py` using `azure-eventhub` SDK + Managed Identity (or connection string for local dev)
 - [x] Generate synthetic transaction events: account_id, amount, currency, country, timestamp, merchant
 - [x] Run producer locally, confirm events land in Event Hub (check via Azure Portal metrics)
 
 **2b. Capture streaming data into ADLS**
-- [ ] Enable Event Hubs **Capture** feature (built-in, writes Avro files straight to `raw-streaming` container on a time/size window) — simplest path, no separate consumer app needed
+- [x] Enable Event Hubs **Capture** feature (built-in, writes Avro files straight to `raw-streaming` container on a time/size window) — simplest path, no separate consumer app needed
 
 **2c. ADF batch pipeline with watermarking**
-- [ ] Create ADF instance (via Bicep or Portal)
-- [ ] Create a **watermark control table** — small table (Azure SQL or even a JSON file in ADLS) storing `last_loaded_timestamp` per source
-- [ ] Build metadata-driven pipeline: Lookup watermark → query source "newer than watermark" → copy to Bronze → update watermark on success
-- [ ] Source data: use a free public API (e.g., exchange rates API) as your "reference data" batch source
-- [ ] Test: run pipeline twice — second run should pull zero/near-zero new rows if nothing changed
+- [x] Create ADF instance (via Bicep or Portal)
+- [x] Create a **watermark control table** — small table (Azure SQL or even a JSON file in ADLS) storing `last_loaded_timestamp` per source
+- [x] Build metadata-driven pipeline: Lookup watermark → query source "newer than watermark" → copy to Bronze → update watermark on success
+- [x] Source data: use a free public API (e.g., exchange rates API) 
+- [x] Test: run pipeline twice — second run should pull zero/near-zero new rows if nothing changed
 
 ---
-## Phase 3 — Land Data in Snowflake
-- [ ] Create Snowflake database, schema (`RAW`, `STAGING` etc.), warehouse (X-Small, auto-suspend 60s to control cost)
-- [ ] Create a **Storage Integration** + **external stage** pointing at your ADLS containers
-- [ ] Set up **Snowpipe** (auto-ingest) OR scheduled `COPY INTO` for batch loads
-- [ ] Load both streaming (Avro from Capture) and batch (JSON/CSV from ADF) into raw Snowflake tables
-- [ ] Verify row counts match source
+## Phase 3 — Land Data in Snowflake ✅ (done)
+- [x] Create Snowflake database, schema (`RAW`, `STAGING` etc.), warehouse (X-Small, auto-suspend 60s to control cost)
+- [x] Create a **Storage Integration** + **external stage** pointing at your ADLS containers
+- [x] Set up **Snowpipe** (auto-ingest) OR scheduled `COPY INTO` for batch loads
+- [x] Load both streaming (Avro from Capture) and batch (JSON/CSV from ADF) into raw Snowflake tables
+- [x] Verify row counts match source
 
 ---
 ## Phase 4 — dbt Cloud: Medallion Transformation
@@ -102,4 +102,4 @@ Run daily for 7 days, logging everything in `docs/RUNLOG.md`:
 ---
 ## After completion
 - [ ] Record a 2–3 min screen-capture walkthrough (great for LinkedIn/portfolio)
-- [ ] Write a short "lessons learned" section in the README (interviewers love this — shows reflection, not just execution)
+- [ ] Write a short "lessons learned" section in the README 
