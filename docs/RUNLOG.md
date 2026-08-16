@@ -57,3 +57,14 @@ This is the evidence of hands-on operational experience.
 - CLI blob listing hit a Cloud Shell managed-identity token timeout issue
   (known quirk) — verified via Portal Storage Browser instead
 - Phase 2 (streaming ingestion) fully verified end-to-end: producer -> Event Hub -> Capture -> ADLS
+
+## Day 3 — Snowflake Storage Integration (Azure AD trust)
+- Created STORAGE INTEGRATION in Snowflake, generated AZURE_CONSENT_URL
+- Consent flow completed (redirected to snowflake.com with valid OAuth code)
+- Enterprise app not immediately visible in Portal search or via
+  `az ad sp show` (also hit a Cloud Shell Graph token timeout, separate
+  known quirk, unresolved for now)
+- Per Snowflake docs: Azure can take 1-2 hours to actually provision the
+  service principal after consent — this is expected propagation delay,
+  not a configuration error
+- Action: wait, then retry role assignment
