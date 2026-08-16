@@ -76,3 +76,12 @@ This is the evidence of hands-on operational experience.
   evaluation, which resolved it immediately (faster than waiting out
   propagation passively)
 - Both stages (streaming Avro, batch JSON) confirmed working via LIST
+
+## Day 3 (cont'd) — Snowpipe auto-ingest tradeoff
+- AUTO_INGEST=TRUE failed: Azure requires an explicit Event Grid +
+  Notification Integration setup, not just the flag
+- Deliberate decision: used scheduled pipe REFRESH (via Snowflake Task,
+  5-min interval matching Event Hubs Capture's flush window) instead of
+  full event-driven auto-ingest
+- Documented as a legitimate "near-real-time" pattern rather than a
+  workaround; full Event Grid integration noted as a future enhancement
