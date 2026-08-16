@@ -1,27 +1,25 @@
 -- FinPulse — Storage Integration (Snowflake <-> ADLS Gen2)
--- This creates a trust relationship using Azure AD, so Snowflake never
--- needs your storage account keys.
-
 USE ROLE ACCOUNTADMIN;
 
 CREATE STORAGE INTEGRATION IF NOT EXISTS finpulse_azure_integration
     TYPE = EXTERNAL_STAGE
     STORAGE_PROVIDER = 'AZURE'
     ENABLED = TRUE
-    AZURE_TENANT_ID = '<your-azure-tenant-id>'  -- az account show --query tenantId -o tsv
+    AZURE_TENANT_ID = '528e985d-a258-43e8-b8b6-f006d2b87a96'
     STORAGE_ALLOWED_LOCATIONS = (
-        'azure://<your-storage-account-name>.blob.core.windows.net/bronze/',
-        'azure://<your-storage-account-name>.blob.core.windows.net/raw-streaming/'
+        'azure://finpulsesadevkaqn4gvdlf.blob.core.windows.net/bronze/',
+        'azure://finpulsesadevkaqn4gvdlf.blob.core.windows.net/raw-streaming/'
     );
 
--- After running this, Snowflake generates an Azure AD app it uses to
--- authenticate. Retrieve it with:
 DESC STORAGE INTEGRATION finpulse_azure_integration;
--- Look for AZURE_CONSENT_URL and AZURE_MULTI_TENANT_APP_NAME in the output.
 
--- Next manual step (one-time, in Azure Portal or CLI):
--- 1. Open the AZURE_CONSENT_URL from above, consent as your Azure AD admin
--- 2. Go to your storage account -> Access Control (IAM) -> Add role assignment
+-- Manual one-time steps required after running the above:
+-- 1. Open AZURE_CONSENT_URL, sign in as Azure AD admin, accept consent
+--    (may need /adminconsent variant + can take 1-2 hours for the
+--    service principal to actually appear in the tenant)
+-- 2. Storage account -> Access Control (IAM) -> Add role assignment
 --    Role: Storage Blob Data Reader
---    Assign to: the Snowflake app (search by AZURE_MULTI_TENANT_APP_NAME)
---    Scope: the storage account (or narrow to bronze/raw-streaming containers)
+--    Assign to: the AZURE_MULTI_TENANT_APP_NAME service principal
+-- 3. If LIST on a stage fails with AuthorizationPermissionMismatch even
+--    after the role shows as assigned, DROP and recreate the stage --
+--    this forced a fresh permission evaluation and resolved it here.

@@ -68,3 +68,11 @@ This is the evidence of hands-on operational experience.
   service principal after consent — this is expected propagation delay,
   not a configuration error
 - Action: wait, then retry role assignment
+
+## Day 3 (cont'd) — Storage Integration fully resolved
+- Role assignment propagation initially caused AuthorizationPermissionMismatch
+  even though IAM showed the role as correctly assigned
+- Fix: DROP and recreate the external stage forced a fresh permission
+  evaluation, which resolved it immediately (faster than waiting out
+  propagation passively)
+- Both stages (streaming Avro, batch JSON) confirmed working via LIST
